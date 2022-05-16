@@ -33,6 +33,7 @@ JMstateModel <-
     interFact = NULL, derivForm = NULL, lag = 0, scaleWB = NULL, CompRisk = FALSE, init = NULL, control = list(),
     Mstate = FALSE, data.Mstate = NULL, ID.Mstate = NULL, init.type.ranef = "mean", b.postVar.opt = FALSE,
     transform.value = NULL, gr.transform.value = NULL, H.transform.value = NULL,
+    verbose = FALSE,
     # 'Mstate' is TRUE when a joint multi-state model is fitted
     # 'data.Mstate' is the database used in 'coxph'
     # 'ID.Mstate' is the column name of the id in 'data.Mstate' (class(ID.Mstate)=="character")
@@ -64,11 +65,18 @@ JMstateModel <-
       if (length(timeVar) != 1 || !is.character(timeVar))
         stop("\n'timeVar' must be a character string.")
       method. <- match.arg(method)
-      method <- switch(method., `weibull-AFT-GH` = , `weibull-AFT-aGH` = "weibull-AFT-GH",
-        `weibull-PH-GH` = , `weibull-PH-aGH` = "weibull-PH-GH",
-        `piecewise-PH-GH` = , `piecewise-PH-aGH` = "piecewise-PH-GH",
-        `Cox-PH-GH` = , `Cox-PH-aGH` = "Cox-PH-GH", `spline-PH-GH` = ,
-        `spline-PH-aGH` = "spline-PH-GH", `ch-Laplace` = "ch-Laplace")
+      method <- switch(method.,
+        `weibull-AFT-GH` = , # goes to next non-missing entry, ie "weibull-AFT-GH"
+        `weibull-AFT-aGH` = "weibull-AFT-GH",
+        `weibull-PH-GH` = ,
+        `weibull-PH-aGH` = "weibull-PH-GH",
+        `piecewise-PH-GH` = ,
+        `piecewise-PH-aGH` = "piecewise-PH-GH",
+        `Cox-PH-GH` = ,
+        `Cox-PH-aGH` = "Cox-PH-GH",
+        `spline-PH-GH` = ,
+        `spline-PH-aGH` = "spline-PH-GH",
+        `ch-Laplace` = "ch-Laplace")
       parameterization <- match.arg(parameterization)
       if (method == "Cox-PH-GH" && !inherits(survObject, "coxph"))
         stop("\nfor 'method = Cox-PH-GH', 'survObject' must inherit from class coxph.")
@@ -296,7 +304,7 @@ JMstateModel <-
         ord = 4, equal.strata.knots = TRUE, typeGH = if (ind.noadapt) "simple" else "adaptive",
         GHk = if (ncol(Z) < 3 && nrow(Z) < 2000) 15 else 9,
         GKk = if (method == "piecewise-PH-GH" || length(Time) > nRisks * nT) 7 else 15,
-        verbose = FALSE)
+        verbose = verbose)
       if (method == "Cox-PH-GH") {
         con$only.EM <- TRUE
         con$iter.EM <- 200
@@ -754,11 +762,14 @@ JMstateModel <-
       rmObjs <- c(names(x), "y.long", "mfX", "mfZ", "data.id2")
       rm(list = rmObjs)
       gc()
+      browser()
       out <- switch(method,
         `Cox-PH-GH` = JM:::phGH.fit(x, y, id, initial.values, parameterization, derivForm, con),
         `weibull-AFT-GH` = JM:::weibullAFTGH.fit(x, y, id, initial.values, scaleWB, parameterization, derivForm, con),
         `weibull-PH-GH` = JM:::weibullPHGH.fit(x, y, id, initial.values, scaleWB, parameterization, derivForm, con),
         `piecewise-PH-GH` = JM:::piecewisePHGH.fit(x, y, id, initial.values, parameterization, derivForm, con),
+
+        # NOTE: THIS ONE DOESNT COME FROM JM package:
         `spline-PH-GH` = splinePHGH.fit(x, y, id, initial.values, parameterization, derivForm, con, transform.value),
         `ch-Laplace` = JM:::chLaplace.fit(x, y, id, initial.values, b, parameterization, derivForm, con))
       H <- out$Hessian

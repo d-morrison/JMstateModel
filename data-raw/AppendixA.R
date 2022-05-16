@@ -91,6 +91,7 @@ jointFit_1step_GHk3 <-
     Mstate = TRUE,
     data.Mstate = data_mstate,
     ID.Mstate = "id",
+    verbose = TRUE,
     control = list(GHk = 3, lng.in.kn = 1))
 summary(jointFit_1step_GHk3)
 # Same joint multi-state model with:
@@ -113,8 +114,8 @@ jointFit_1step_GHk9 <-
 summary(jointFit_1step_GHk9)
 # To use the multi-step pseudo-adaptive Gauss-Hermite rule, we have to source
 # two functions inspired by JM:
-source("modified.log.posterior.b2.R")
-source("modified.ranef.jointModel.R")
+# source("modified.log.posterior.b2.R")
+# source("modified.ranef.jointModel.R")
 # Same joint multi-state model with:
 # - 9 and 9 Gauss-Hermite quadrature points in the two-step pseudo-adaptive
 # numerical integration to approximate the integral over random effects.
