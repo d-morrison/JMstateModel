@@ -1,9 +1,9 @@
 # Description: Modified 'log.posterior.b2' function from the JM package
-# Author: Loïc Ferrer
+# Author: Loic Ferrer
 # Date: November 27, 2017
 
 modified.log.posterior.b2 <-
-  function (object) 
+  function (object)
   {
     method <- object$method
     timeVar <- object$timeVar
@@ -41,7 +41,7 @@ modified.log.posterior.b2 <-
     st <- object$x$st
     wk <- object$x$wk
     id.GK <- object$x$id.GK
-    if (is.null(id.GK)) 
+    if (is.null(id.GK))
       id.GK <- rep(seq_along(logT), each = object$control$GKk)
     Q <- object$x$Q
     ncx <- ncol(X)
@@ -52,7 +52,7 @@ modified.log.posterior.b2 <-
     sigma <- object$coefficients$sigma
     D <- object$coefficients$D
     diag.D <- ncol(D) == 1 & nrow(D) > 1
-    D <- if (diag.D) 
+    D <- if (diag.D)
       diag(c(D))
     else D
     gammas <- object$coefficients$gammas
@@ -72,7 +72,7 @@ modified.log.posterior.b2 <-
       log.p.yb <- sum(logNorm)
       log.p.b <- dmvnorm(b, rep(0, ncz), D, TRUE)
       eta.tw <- if (!is.null(W)) {
-        if (method %in% c("weibull-PH-GH", "weibull-AFT-GH")) 
+        if (method %in% c("weibull-PH-GH", "weibull-AFT-GH"))
           as.vector(cbind(1, W[idT.i, , drop = FALSE]) %*% gammas)
         else as.vector(W[idT.i, , drop = FALSE] %*% gammas)
       }
@@ -92,27 +92,27 @@ modified.log.posterior.b2 <-
       if (parameterization %in% c("slope", "both")) {
         Xtime.deriv.i <- Xtime.deriv[idT.i, , drop = FALSE]
         Ztime.deriv.i <- Ztime.deriv[idT.i, , drop = FALSE]
-        Y.deriv <- c(Xtime.deriv.i %*% betas[indFixed]) + 
+        Y.deriv <- c(Xtime.deriv.i %*% betas[indFixed]) +
           rowSums(Ztime.deriv.i * rep(b[indRandom], each = nrow(Ztime.deriv.i))) # modified
         Xs.deriv.i <- Xs.deriv[id.GK.i, , drop = FALSE]
         Zs.deriv.i <- Zs.deriv[id.GK.i, , drop = FALSE]
-        Ys.deriv <- as.vector(Xs.deriv.i %*% betas[indFixed]) + 
+        Ys.deriv <- as.vector(Xs.deriv.i %*% betas[indFixed]) +
           rowSums(Zs.deriv.i * rep(b[indRandom], each = nrow(Zs.deriv.i)))
         WintF.sl.i <- WintF.sl[idT.i, , drop = FALSE]
         Ws.intF.sl.i <- Ws.intF.sl[id.GK.i, , drop = FALSE]
       }
-      tt <- switch(parameterization, 
+      tt <- switch(parameterization,
                    value = {
                      if (is.null(transform.value))
                        c(WintF.vl.i %*% alpha) * Y
-                     else 
+                     else
                        c(WintF.vl.i %*% alpha) * transform.value(Y)
                    },
-                   slope = c(WintF.sl.i %*% Dalpha) * Y.deriv, 
+                   slope = c(WintF.sl.i %*% Dalpha) * Y.deriv,
                    both = {
                      if (is.null(transform.value))
                        c(WintF.vl.i %*% alpha) * Y + c(WintF.sl.i %*% Dalpha) * Y.deriv
-                     else 
+                     else
                        c(WintF.vl.i %*% alpha) * transform.value(Y) + c(WintF.sl.i %*% Dalpha) * Y.deriv
                    })
       ss <- switch(parameterization,
@@ -125,7 +125,7 @@ modified.log.posterior.b2 <-
                    both = {
                      if (is.null(transform.value))
                        c(Ws.intF.vl.i %*% alpha) * Ys + c(Ws.intF.sl.i %*% Dalpha) * Ys.deriv
-                     else 
+                     else
                        c(Ws.intF.vl.i %*% alpha) * transform.value(Ys) + c(Ws.intF.sl.i %*% Dalpha) * Ys.deriv
                    })
       log.p.tb <- if (method == "weibull-PH-GH") {
@@ -146,7 +146,7 @@ modified.log.posterior.b2 <-
         W2s.i <- W2s[id.GK.i, , drop = FALSE]
         Vi <- exp(c(W2s.i %*% gammas.bs) + ss)
         kk.i <- sum(idT.i)
-        log.S <- -exp(eta.tw) * P[idT.i] * 
+        log.S <- -exp(eta.tw) * P[idT.i] *
           tapply(rep(wk, kk.i) * Vi, rep(seq_len(kk.i), each = length(wk)), sum)
         log.h <- eta.tw + tt + c(W2.i %*% gammas.bs)
         sum(d[idT.i] * log.h + log.S)

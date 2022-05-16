@@ -1,16 +1,16 @@
 # Description: Modified 'ranef.jointModel' function from the JM package
-# Author: Loïc Ferrer
+# Author: Loic Ferrer
 # Date: January 15, 2016
 
-modified.ranef.jointModel <- 
-  function (object, type = c("mean", "mode"), postVar = FALSE, ...) 
+modified.ranef.jointModel <-
+  function (object, type = c("mean", "mode"), postVar = FALSE, ...)
 {
-  if (!inherits(object, "jointModel")) 
+  if (!inherits(object, "jointModel"))
     stop("Use only with 'jointModel' objects.\n")
   type <- match.arg(type)
   if (type == "mean") {
     out <- as.matrix(object$EB$post.b)
-    rownames(out) <- if (!object$CompRisk && !object$LongFormat) 
+    rownames(out) <- if (!object$CompRisk && !object$LongFormat)
       names(object$y$logT)
     else seq_len(nrow(out))
     if (postVar) {
@@ -28,7 +28,7 @@ modified.ranef.jointModel <-
   else {
     mv <- modified.log.posterior.b2(object) # modified
     out <- mv$modes
-    if (postVar) 
+    if (postVar)
       attr(out, "postVar") <- mv$vars
   }
   out
