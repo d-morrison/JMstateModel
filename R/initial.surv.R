@@ -1,34 +1,34 @@
-initial.surv <- 
-  function (Time, d, W, WintF.vl, WintF.sl, id, times, method, 
-            parameterization, long = NULL, long.deriv = NULL, extra = NULL, 
+initial.surv <-
+  function (Time, d, W, WintF.vl, WintF.sl, id, times, method,
+            parameterization, long = NULL, long.deriv = NULL, extra = NULL,
             LongFormat, transform.value = NULL) # modified
     {
     old <- options(warn = (-1))
     on.exit(options(old))
     if (!is.null(long)) {
       long.id <- tapply(long, id, tail, 1)
-      if (parameterization == "value") 
+      if (parameterization == "value")
         longD.id <- NULL
     }
     if (!is.null(long.deriv)) {
       longD.id <- tapply(long.deriv, id, tail, 1)
-      if (parameterization == "slope") 
+      if (parameterization == "slope")
         long.id <- NULL
     }
     idT <- extra$ii
     WW <- if (!LongFormat) {
-      cbind(W, 
+      cbind(W,
             if (is.null(transform.value)) long.id
             else transform.value(long.id),
             longD.id)
     }
     else {
-      cbind(W, 
+      cbind(W,
             if (is.null(transform.value)) long.id[idT]
             else transform.value(long.id[idT]),
             longD.id[idT])
     }
-    if (method %in% c("Cox-PH-GH", "weibull-PH-GH", "piecewise-PH-GH", 
+    if (method %in% c("Cox-PH-GH", "weibull-PH-GH", "piecewise-PH-GH",
                       "spline-PH-GH", "spline-PH-Laplace")) {
       if (!LongFormat) {
         DD <- data.frame(id = id, Time = Time[id], d = d[id], times = times)
@@ -90,28 +90,28 @@ initial.surv <-
       }
       else NULL
       form <- if (!LongFormat) {
-        switch(parameterization, 
+        switch(parameterization,
                value = paste("Surv(start, stop, event) ~", "long", baseCovs),
                slope = paste("Surv(start, stop, event) ~", "longD", baseCovs),
                both = paste("Surv(start, stop, event) ~", "long + longD", baseCovs))
       }
       else {
-        switch(parameterization, 
+        switch(parameterization,
                value = paste("Surv(Time, d) ~", "long", baseCovs),
                slope = paste("Surv(Time, d) ~", "longD", baseCovs),
                both = paste("Surv(Time, d) ~", "long + longD", baseCovs))
       }
-      if (!is.null(DD$strata)) 
+      if (!is.null(DD$strata))
         form <- paste(form, "+ strata(strata)")
       form <- as.formula(form)
       cph <- coxph(form, data = DD)
       coefs <- cph$coefficients
-      out <- switch(parameterization, 
-                    value = list(alpha = coefs[1:k], 
+      out <- switch(parameterization,
+                    value = list(alpha = coefs[1:k],
                                  gammas = coefs[-(1:k)]),
-                    slope = list(Dalpha = coefs[1:l], 
+                    slope = list(Dalpha = coefs[1:l],
                                  gammas = coefs[-(1:l)]),
-                    both = list(alpha = coefs[1:k], 
+                    both = list(alpha = coefs[1:k],
                                 Dalpha = coefs[(k + 1):(k + l)],
                                 gammas = coefs[-(1:(k + l))]))
       if (method == "Cox-PH-GH") {
@@ -159,7 +159,7 @@ initial.surv <-
             ind <- row.names(SpD.i) %in% rn
             SpD.i <- SpD.i[ind, ]
             init.fit <- survreg(Surv(Time, d) ~ ., data = SpD.i)
-            coefs <- init.fit$coef
+            coefs <- coef(init.fit)
             xi <- 1/init.fit$scale
             phi <- exp(coefs[1])
             logh <- -log(phi * xi * SpD.i$Time^(xi - 1))
@@ -183,17 +183,17 @@ initial.surv <-
       WW <- cbind(W, long.id, longD.id)
       init.fit <- survreg(Surv(Time, d) ~ WW, data = dat)
       coefs <- -init.fit$coef
-      nk <- if (is.null(W)) 
+      nk <- if (is.null(W))
         1
       else ncol(W) + 1
       out <- switch(parameterization,
-                    value = list(gammas = coefs[1:nk], 
+                    value = list(gammas = coefs[1:nk],
                                  alpha = coefs[-(1:nk)],
-                                 sigma.t = 1/init.fit$scale), 
-                    slope = list(gammas = coefs[1:nk],
-                                 Dalpha = coefs[-(1:nk)], 
                                  sigma.t = 1/init.fit$scale),
-                    both = list(gammas = coefs[1:nk], 
+                    slope = list(gammas = coefs[1:nk],
+                                 Dalpha = coefs[-(1:nk)],
+                                 sigma.t = 1/init.fit$scale),
+                    both = list(gammas = coefs[1:nk],
                                 alpha = coefs[seq(nk + 1, nk + k)],
                                 Dalpha = coefs[-seq(1, nk + k)],
                                 sigma.t = 1/init.fit$scale))
@@ -216,7 +216,7 @@ initial.surv <-
       nk <- ncol(W)
       nx <- NCOL(X)
       logH <- coefs[1] + logT/init.fit$scale
-      coefs <- c(as.vector(lm.fit(W, logH)$coefficients), 
+      coefs <- c(as.vector(lm.fit(W, logH)$coefficients),
                  coefs[-1])
       out <- list(gammas = c(sort(coefs[1:nk]),
                              if (nx > 1) coefs[seq(nk + 1, nk + nx - 1)] else NULL),

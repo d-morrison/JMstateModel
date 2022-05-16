@@ -6,6 +6,7 @@ library(nlme)
 # Import two databases which contain longitudinal and multi-state data:
 # load("data.RData")
 load_all()
+# library(JMStateModel)
 library(dplyr)
 rm(list = ls())
 
@@ -40,7 +41,7 @@ covs <- "X"
 # entry time in the current state, and ’Tstop’ the time of transition or
 # censorship; ’status’ denotes if the transition has been performed:
 data_mstate <- msprep(
-  time = c(NA, "time_of_State_1", "time_of_State_2"),
+  time = c(NA, "t_State_1", "t_State_2"),
   status = c(NA, "State_1", "State_2"),
   data = data_surv,
   trans = tmat,
@@ -76,12 +77,14 @@ dForm <- list(fixed = ~ 1 + I((-1.2) * ((1 + times)^(-2.2))) +
 # - 3 Gauss-Hermite quadrature points in the pseudo-adaptive numerical
 # integration to approximate the integral over random effects.
 jointFit_1step_GHk3 <-
-  JMstateModel(lmeObject = lmeFit,
+  JMstateModel(
+    lmeObject = lmeFit,
     survObject = coxFit,
     timeVar = "times",
     parameterization = "both",
     method = "spline-PH-aGH",
-    interFact = list(value = ~strata(trans) - 1,
+    interFact = list(
+      value = ~strata(trans) - 1,
       slope = ~strata(trans) - 1,
       data = data_mstate),
     derivForm = dForm,
@@ -104,7 +107,6 @@ jointFit_1step_GHk9 <-
       data = data_mstate),
     derivForm = dForm,
     Mstate = TRUE,
-    3
     data.Mstate = data_mstate,
     ID.Mstate = "id",
     control = list(GHk = 9, lng.in.kn = 1))
