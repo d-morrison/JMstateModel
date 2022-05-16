@@ -1,7 +1,34 @@
-JMstateModel <- 
-  function (lmeObject, survObject, timeVar, 
-            parameterization = c("value", "slope", "both"), 
-            method = c("weibull-PH-aGH", "weibull-PH-GH", "weibull-AFT-aGH", "weibull-AFT-GH", "piecewise-PH-aGH", 
+#' Title
+#'
+#' @param lmeObject
+#' @param survObject
+#' @param timeVar
+#' @param parameterization
+#' @param method
+#' @param interFact
+#' @param derivForm
+#' @param lag
+#' @param scaleWB
+#' @param CompRisk
+#' @param init
+#' @param control
+#' @param Mstate
+#' @param data.Mstate
+#' @param ID.Mstate
+#' @param init.type.ranef
+#' @param b.postVar.opt
+#' @param transform.value
+#' @param gr.transform.value
+#' @param H.transform.value
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+JMstateModel <-
+  function (lmeObject, survObject, timeVar,
+            parameterization = c("value", "slope", "both"),
+            method = c("weibull-PH-aGH", "weibull-PH-GH", "weibull-AFT-aGH", "weibull-AFT-GH", "piecewise-PH-aGH",
                        "piecewise-PH-GH", "Cox-PH-aGH", "Cox-PH-GH", "spline-PH-aGH", "spline-PH-GH", "ch-Laplace"),
             interFact = NULL, derivForm = NULL, lag = 0, scaleWB = NULL, CompRisk = FALSE, init = NULL, control = list(),
             Mstate = FALSE, data.Mstate = NULL, ID.Mstate = NULL, init.type.ranef = "mean", b.postVar.opt = FALSE,
@@ -15,42 +42,42 @@ JMstateModel <-
             # 'transform.value' is the transformation function of the true current marker value which is considered in the dependence function
             # 'gr.transform.value' is the derivative of the transformation function --> function with, in order: arugments x (fixed effects) and y (true current level)
             # 'H.transform.value' is the second derivative of the transformation function --> function with, in order: arugments x (fixed effects) and y (true current level)
-            ...) 
+            ...)
   {
     cl <- match.call()
     #### Errors message ####
-    if (!inherits(lmeObject, "lme")) 
+    if (!inherits(lmeObject, "lme"))
       stop("\n'lmeObject' must inherit from class lme.")
-    if (length(lmeObject$group) > 1) 
+    if (length(lmeObject$group) > 1)
       stop("\nnested random-effects are not allowed in lme().")
-    if (!is.null(lmeObject$modelStruct$corStruct)) 
+    if (!is.null(lmeObject$modelStruct$corStruct))
       warning("correlation structure in 'lmeObject' is ignored.\n")
-    if (!is.null(lmeObject$modelStruct$varStruct)) 
+    if (!is.null(lmeObject$modelStruct$varStruct))
       warning("variance structure in 'lmeObject' is ignored.\n")
-    if (!inherits(survObject, "coxph") && !inherits(survObject, "survreg")) 
+    if (!inherits(survObject, "coxph") && !inherits(survObject, "survreg"))
       stop("\n'survObject' must inherit from class coxph or class survreg.")
-    if (!is.matrix(survObject$x)) 
-      stop("\nuse argument 'x = TRUE' in ", 
+    if (!is.matrix(survObject$x))
+      stop("\nuse argument 'x = TRUE' in ",
            if (inherits(survObject, "coxph")) "'coxph()'."
            else "'survreg()'.")
-    if (length(timeVar) != 1 || !is.character(timeVar)) 
+    if (length(timeVar) != 1 || !is.character(timeVar))
       stop("\n'timeVar' must be a character string.")
     method. <- match.arg(method)
-    method <- switch(method., `weibull-AFT-GH` = , `weibull-AFT-aGH` = "weibull-AFT-GH", 
-                     `weibull-PH-GH` = , `weibull-PH-aGH` = "weibull-PH-GH", 
-                     `piecewise-PH-GH` = , `piecewise-PH-aGH` = "piecewise-PH-GH", 
-                     `Cox-PH-GH` = , `Cox-PH-aGH` = "Cox-PH-GH", `spline-PH-GH` = , 
+    method <- switch(method., `weibull-AFT-GH` = , `weibull-AFT-aGH` = "weibull-AFT-GH",
+                     `weibull-PH-GH` = , `weibull-PH-aGH` = "weibull-PH-GH",
+                     `piecewise-PH-GH` = , `piecewise-PH-aGH` = "piecewise-PH-GH",
+                     `Cox-PH-GH` = , `Cox-PH-aGH` = "Cox-PH-GH", `spline-PH-GH` = ,
                      `spline-PH-aGH` = "spline-PH-GH", `ch-Laplace` = "ch-Laplace")
     parameterization <- match.arg(parameterization)
-    if (method == "Cox-PH-GH" && !inherits(survObject, "coxph")) 
+    if (method == "Cox-PH-GH" && !inherits(survObject, "coxph"))
       stop("\nfor 'method = Cox-PH-GH', 'survObject' must inherit from class coxph.")
-    if (parameterization %in% c("slope", "both") && method %in% c("Cox-PH-GH", "ch-Laplace")) 
+    if (parameterization %in% c("slope", "both") && method %in% c("Cox-PH-GH", "ch-Laplace"))
       stop("\nthe slope parameterization is not currently available for methods 'Cox-PH-GH' & 'ch-Laplace'.")
     if (parameterization %in% c("slope", "both") && is.null(derivForm)) {
       stop("\nwhen parameterization is 'slope' or 'both' you need to specify the 'derivForm' argument.")
     }
     if (parameterization %in% c("slope", "both") && !is.list(derivForm)) {
-      stop("\nthe 'derivForm' argument must be a list with components 'fixed' (a formula),\n\t'indFixed'", 
+      stop("\nthe 'derivForm' argument must be a list with components 'fixed' (a formula),\n\t'indFixed'",
            "(a numeric vector), 'random' (a formula) and 'indRandom' (a numeric vector).")
     }
     if (!is.null(interFact) && !is.list(interFact)) {
@@ -60,7 +87,7 @@ JMstateModel <-
       stop("\nincluding interaction terms is not currently available for methods 'Cox-PH-GH' & 'ch-Laplace'.")
     }
     if ((CompRisk || Mstate) && (method != "spline-PH-GH" || is.null(survObject$strata))) {
-      stop("\nto fit a competing risks or joint multi-state model you must choose as method 'spline-PH-GH'", 
+      stop("\nto fit a competing risks or joint multi-state model you must choose as method 'spline-PH-GH'",
            " and include a strata() in the specification of the coxph().")
     }
     if (Mstate && (!is.null(survObject$cluster))) {
@@ -95,21 +122,21 @@ JMstateModel <-
       keepW <- suppressWarnings(!is.na(survObject$coefficients))
       W <- W[, keepW, drop = FALSE]
       if (CompRisk || Mstate) {
-        nRisks <- length(unique(survObject$strata)) 
+        nRisks <- length(unique(survObject$strata))
       }
       else {
         nRisks <- 1
       }
-      surv <- survObject$y 
+      surv <- survObject$y
       if (attr(surv, "type") == "right") {
         LongFormat <- FALSE
         Time <- survObject$y[, 1]
         d <- survObject$y[, 2]
-      }      
+      }
       else if (attr(surv, "type") == "counting") {
         LongFormat <- TRUE
-        if (is.null(survObject$model)) 
-          stop("\nplease refit the Cox model including in the ", 
+        if (is.null(survObject$model))
+          stop("\nplease refit the Cox model including in the ",
                "call to coxph() the argument 'model = TRUE'.")
         Time <- survObject$y[, 2]
         d <- survObject$y[, 3]
@@ -128,7 +155,7 @@ JMstateModel <-
       }
       idT <- match(idT, unique(idT))
     }
-    else { 
+    else {
       W <- survObject$x[, -1, drop = FALSE]
       Time <- exp(survObject$y[, 1])
       d <- survObject$y[, 2]
@@ -139,20 +166,20 @@ JMstateModel <-
     nT <- length(unique(idT))
     if (LongFormat && is.null(survObject$model$cluster) && !Mstate )
       stop("\nuse argument 'model = TRUE' and cluster() in coxph().")
-    if (!length(W)) 
+    if (!length(W))
       W <- NULL
-    if (sum(d) < 5) 
+    if (sum(d) < 5)
       warning("\nmore than 5 events are required.")
     WintF.vl <- WintF.sl <- as.matrix(rep(1, length(Time)))
     if (!is.null(interFact)) {
-      if (!is.null(interFact$value)) 
+      if (!is.null(interFact$value))
         WintF.vl <- if (is.null(survObject$model) || !is.null(interFact$data)) {
           model.matrix(interFact$value, data = interFact$data)
         }
       else {
         model.matrix(interFact$value, data = survObject$model)
       }
-      if (!is.null(interFact$slope)) 
+      if (!is.null(interFact$slope))
         WintF.sl <- if (is.null(survObject$model) || !is.null(interFact$data)) {
           model.matrix(interFact$slope, data = interFact$data)
         }
@@ -175,12 +202,12 @@ JMstateModel <-
         }
       }
       else stop("\n'init.type.ranef' must be 'mean' or 'mode'.")
-    } 
+    }
     else data.matrix(ranef(lmeObject))
     dimnames(b) <- NULL
     nY <- nrow(b)
-    if (nY != nT) 
-      stop("sample sizes in the longitudinal and event processes differ; ", 
+    if (nY != nT)
+      stop("sample sizes in the longitudinal and event processes differ; ",
            "maybe you forgot the cluster() argument.\n")
     if (class(init) == "jointModel") {
       init.object <- init
@@ -200,7 +227,7 @@ JMstateModel <-
     y.long <- model.response(mfX, "numeric")
     data.id <- data[!duplicated(id), ]
     data.id <- data.id[idT, ]
-    if (!timeVar %in% names(data)) 
+    if (!timeVar %in% names(data))
       stop("\n'timeVar' does not correspond to one of the columns in the model.frame of 'lmeObject'.")
     max.timeY <- tapply(data[[timeVar]], id, max)
     max.timeT <- tapply(Time, idT, max)
@@ -229,40 +256,40 @@ JMstateModel <-
       Ztime.deriv <- model.matrix(derivForm$random, mfZ.deriv.id)
       Xderiv <- model.matrix(derivForm$fixed, mfX.deriv)
       Zderiv <- model.matrix(derivForm$random, mfZ.deriv)
-      long.deriv <- as.vector(c(Xderiv %*% fixef(lmeObject)[derivForm$indFixed]) + 
-                                if (length(derivForm$indRandom) > 1 || derivForm$indRandom) 
+      long.deriv <- as.vector(c(Xderiv %*% fixef(lmeObject)[derivForm$indFixed]) +
+                                if (length(derivForm$indRandom) > 1 || derivForm$indRandom)
                                   rowSums(Zderiv * b[id, derivForm$indRandom, drop = FALSE])
                               else rep(0, nrow(Zderiv)))
     }
-    if (parameterization == "value") 
+    if (parameterization == "value")
       long.deriv <- NULL
-    if (parameterization == "slope") 
+    if (parameterization == "slope")
       long <- NULL
     y <- list(y = y.long, logT = log(Time), d = d, lag = lag)
-    x <- list(X = X, Z = Z, W = W, WintF.vl = WintF.vl, WintF.sl = WintF.sl, 
+    x <- list(X = X, Z = Z, W = W, WintF.vl = WintF.vl, WintF.sl = WintF.sl,
               idT = idT, nRisks = nRisks)
-    x <- switch(parameterization, 
+    x <- switch(parameterization,
                 value = c(x, list(Xtime = Xtime, Ztime = Ztime)),
                 slope = c(x, list(Xtime.deriv = Xtime.deriv, Ztime.deriv = Ztime.deriv)),
                 both = c(x, list(Xtime = Xtime, Ztime = Ztime, Xtime.deriv = Xtime.deriv, Ztime.deriv = Ztime.deriv)))
     #### Baseline hazards/intensities ####
     ind.noadapt <- method. %in% c("weibull-AFT-GH", "weibull-PH-GH", "piecewise-PH-GH", "Cox-PH-GH", "spline-PH-GH")
-    con <- list(only.EM = FALSE, iter.EM = if (method == "spline-PH-GH") 120 else 50, 
-                iter.qN = 350, optimizer = "optim", tol1 = 0.001, tol2 = 1e-04, 
+    con <- list(only.EM = FALSE, iter.EM = if (method == "spline-PH-GH") 120 else 50,
+                iter.qN = 350, optimizer = "optim", tol1 = 0.001, tol2 = 1e-04,
                 tol3 = if (!CompRisk | !Mstate) sqrt(.Machine$double.eps) else 1e-09,
-                numeriDeriv = "fd", eps.Hes = 1e-06, parscale = NULL, 
-                step.max = 0.1, backtrackSteps = 2, knots = NULL, ObsTimes.knots = TRUE, 
-                lng.in.kn = if (method == "piecewise-PH-GH") 6 else 5, 
-                ord = 4, equal.strata.knots = TRUE, typeGH = if (ind.noadapt) "simple" else "adaptive", 
-                GHk = if (ncol(Z) < 3 && nrow(Z) < 2000) 15 else 9, 
-                GKk = if (method == "piecewise-PH-GH" || length(Time) > nRisks * nT) 7 else 15, 
+                numeriDeriv = "fd", eps.Hes = 1e-06, parscale = NULL,
+                step.max = 0.1, backtrackSteps = 2, knots = NULL, ObsTimes.knots = TRUE,
+                lng.in.kn = if (method == "piecewise-PH-GH") 6 else 5,
+                ord = 4, equal.strata.knots = TRUE, typeGH = if (ind.noadapt) "simple" else "adaptive",
+                GHk = if (ncol(Z) < 3 && nrow(Z) < 2000) 15 else 9,
+                GKk = if (method == "piecewise-PH-GH" || length(Time) > nRisks * nT) 7 else 15,
                 verbose = FALSE)
     if (method == "Cox-PH-GH") {
       con$only.EM <- TRUE
       con$iter.EM <- 200
-      con$GHk <- if (ncol(Z) == 1) 
+      con$GHk <- if (ncol(Z) == 1)
         15
-      else if (ncol(Z) == 2) 
+      else if (ncol(Z) == 2)
         11
       else 9
     }
@@ -270,15 +297,15 @@ JMstateModel <-
     namC <- names(con)
     con[(namc <- names(control))] <- control
     if (con$typeGH != "simple" && !"GHk" %in% namc) {
-      con$GHk <- if (ncol(Z) <= 3 && nrow(Z) < 2000) 
+      con$GHk <- if (ncol(Z) <= 3 && nrow(Z) < 2000)
         5
       else 3
     }
-    if (length(noNms <- namc[!namc %in% namC]) > 0) 
+    if (length(noNms <- namc[!namc %in% namC]) > 0)
       warning("unknown names in 'control': ", paste(noNms, collapse = ", "))
-    if (method == "Cox-PH-GH" && !con$only.EM) 
+    if (method == "Cox-PH-GH" && !con$only.EM)
       stop("with method 'Cox-PH-GH' only the EM algorithm is used.\n")
-    if (method == "Cox-PH-GH" && any(!is.na(match(c("iter.qN", "optimizer"), namc)))) 
+    if (method == "Cox-PH-GH" && any(!is.na(match(c("iter.qN", "optimizer"), namc))))
       warning("method 'Cox-PH-GH' uses only the EM algorithm.\n")
     if (method %in% c("weibull-AFT-GH", "weibull-PH-GH", "spline-PH-GH", "spline-PH-Laplace")) {
       wk <- JM:::gaussKronrod(con$GKk)$wk
@@ -312,13 +339,13 @@ JMstateModel <-
       Ws.intF.vl <- WintF.vl[id.GK, , drop = FALSE]
       Ws.intF.sl <- WintF.sl[id.GK, , drop = FALSE]
       x <- c(x, list(P = P, st = c(t(st)), wk = wk, Ws.intF.vl = Ws.intF.vl, Ws.intF.sl = Ws.intF.sl))
-      x <- switch(parameterization, 
+      x <- switch(parameterization,
                   value = c(x, list(Xs = Xs, Zs = Zs)),
                   slope = c(x, list(Xs.deriv = Xs.deriv, Zs.deriv = Zs.deriv)),
                   both = c(x, list(Xs.deriv = Xs.deriv, Zs.deriv = Zs.deriv, Xs = Xs, Zs = Zs)))
-      #### method == "spline-PH-GH" || method == "spline-PH-Laplace" ####    
+      #### method == "spline-PH-GH" || method == "spline-PH-Laplace" ####
       if (method == "spline-PH-GH" || method == "spline-PH-Laplace") {
-        strt <- if (is.null(survObject$strata)) 
+        strt <- if (is.null(survObject$strata))
           gl(1, length(Time))
         else survObject$strata
         nstrt <- length(levels(strt))
@@ -364,13 +391,13 @@ JMstateModel <-
             kk <- kk[kk < max(t)]
             sort(c(rep(range(Time, st), con$ord), kk))
           })
-        }        
+        }
         con$knots <- kn
-        W2 <- mapply(function(k, t) splineDesign(k, t, ord = con$ord), 
+        W2 <- mapply(function(k, t) splineDesign(k, t, ord = con$ord),
                      kn, split.Time, SIMPLIFY = FALSE)
-        if (any(sapply(W2, colSums) == 0)) 
-          stop("\nsome of the knots of the B-splines basis are set outside the range", 
-               "\n   of the observed event times for one of the strata; refit the model", 
+        if (any(sapply(W2, colSums) == 0))
+          stop("\nsome of the knots of the B-splines basis are set outside the range",
+               "\n   of the observed event times for one of the strata; refit the model",
                "\n   setting the control argument 'equal.strata.knots' to FALSE.")
         W2 <- mapply(function(w2, ind) {
           out <- matrix(0, length(Time), ncol(w2))
@@ -380,7 +407,7 @@ JMstateModel <-
         W2 <- do.call(cbind, W2)
         strt.s <- rep(strt, each = con$GKk)
         split.Time <- split(c(t(st)), strt.s)
-        W2s <- mapply(function(k, t) splineDesign(k, t, ord = con$ord), 
+        W2s <- mapply(function(k, t) splineDesign(k, t, ord = con$ord),
                       kn, split.Time, SIMPLIFY = FALSE)
         W2s <- mapply(function(w2s, ind) {
           out <- matrix(0, length(Time) * con$GKk, ncol(w2s))
@@ -392,7 +419,7 @@ JMstateModel <-
         x <- c(x, list(W2 = W2, W2s = W2s))
       }
     }
-    if (method == "piecewise-PH-GH") { 
+    if (method == "piecewise-PH-GH") {
       wk <- JM:::gaussKronrod(con$GKk)$wk
       sk <- JM:::gaussKronrod(con$GKk)$sk
       nk <- length(sk)
@@ -405,7 +432,7 @@ JMstateModel <-
           unique(quantile(Time[d == 1], seq(0, 1, len = Q - 1), names = FALSE))
         }
         qs <- qs + 1e-06
-        if (max(qs) > max(Time)) 
+        if (max(qs) > max(Time))
           qs[which.max(qs)] <- max(Time) - 1e-06
         con$knots <- qs
         qs <- c(0, qs, max(Time) + 1)
@@ -451,10 +478,10 @@ JMstateModel <-
       }
       Ws.intF.vl <- WintF.vl[id.GK, , drop = FALSE]
       Ws.intF.sl <- WintF.sl[id.GK, , drop = FALSE]
-      x <- c(x, list(P = P[!is.na(P)], st = st[!is.na(st)], 
-                     wk = wk, id.GK = id.GK, Q = Q, Ws.intF.vl = Ws.intF.vl, 
+      x <- c(x, list(P = P[!is.na(P)], st = st[!is.na(st)],
+                     wk = wk, id.GK = id.GK, Q = Q, Ws.intF.vl = Ws.intF.vl,
                      Ws.intF.sl = Ws.intF.sl))
-      x <- switch(parameterization, 
+      x <- switch(parameterization,
                   value = c(x, list(Xs = Xs, Zs = Zs)),
                   slope = c(x, list(Xs.deriv = Xs.deriv, Zs.deriv = Zs.deriv)),
                   both = c(x, list(Xs.deriv = Xs.deriv, Zs.deriv = Zs.deriv, Xs = Xs, Zs = Zs)))
@@ -504,7 +531,7 @@ JMstateModel <-
         if (class(init.object) == "jointModel") {
           idT.GK <- rep(idT, each = init.object$control$GKk)
           eta.yx <- as.vector(X %*% init$betas)
-          eta.tw1 <- if (!is.null(W)) 
+          eta.tw1 <- if (!is.null(W))
             as.vector(W %*% init$gammas)
           else rep(0, length(init.object$y$logT))
           eta.tw2 <- as.vector(W2 %*% init$gammas.bs)
@@ -528,13 +555,13 @@ JMstateModel <-
               if (length(init.object$derivForm$indRandom) > 1) init.object$EB$Ztimeb.deriv
             else 0
             Ys.deriv <- as.vector(init.object$x$Xs.deriv %*% init$betas[init.object$derivForm$indFixed]) +
-              if (length(init.object$derivForm$indRandom) > 1) 
+              if (length(init.object$derivForm$indRandom) > 1)
                 as.vector(rowSums(init.object$x$Zs.deriv * b[idT.GK, init.object$derivForm$indRandom, drop = FALSE]))
             else 0
-            eta.t <- if (parameterization %in% "both") 
+            eta.t <- if (parameterization %in% "both")
               eta.t + c(init.object$x$WintF.sl %*% init$Dalpha) * Y.deriv
             else eta.tw2 + eta.tw1 + c(init.object$x$WintF.sl %*% init$Dalpha) * Y.deriv
-            eta.s <- if (parameterization %in% "both") 
+            eta.s <- if (parameterization %in% "both")
               eta.s + c(init.object$x$Ws.intF.sl %*% init$Dalpha) * Ys.deriv
             else c(init.object$x$Ws.intF.sl %*% init$Dalpha) * Ys.deriv
           }
@@ -671,7 +698,7 @@ JMstateModel <-
               Vs[[i]] <- solve(crossprod(Z.i)/init$sigma^2 + inv.VC + H.tb[i, , ])
             }
           }
-        } 
+        }
       }
       con$inv.chol.VCs <- try(lapply(Vs, function(x) solve(chol(solve(x)))), TRUE)
       con$det.inv.chol.VCs <- sapply(con$inv.chol.VCs, det)
@@ -679,18 +706,18 @@ JMstateModel <-
     con$inv.chol.VC <- solve(chol(solve(VC)))
     con$det.inv.chol.VC <- det(con$inv.chol.VC)
     con$ranef <- b
-    if (all(VC[upper.tri(VC)] == 0)) 
+    if (all(VC[upper.tri(VC)] == 0))
       VC <- diag(VC)
     if (class(init.object) != "jointModel") {
       init.surv <- initial.surv(Time, d, W, WintF.vl, WintF.sl,
-                                id, times = data[[timeVar]], method, parameterization, 
-                                long = long, long.deriv = long.deriv, 
-                                extra = list(W2 = x$W2, control = con, ii = idT, strata = survObject$strata), 
+                                id, times = data[[timeVar]], method, parameterization,
+                                long = long, long.deriv = long.deriv,
+                                extra = list(W2 = x$W2, control = con, ii = idT, strata = survObject$strata),
                                 LongFormat = CompRisk | Mstate | length(Time) > nT,
                                 transform.value = transform.value)
-      
-      if (method == "Cox-PH-GH" && length(init.surv$lambda0) < 
-          length(unqT)) 
+
+      if (method == "Cox-PH-GH" && length(init.surv$lambda0) <
+          length(unqT))
         init.surv$lambda0 <- basehaz(survObject)$hazard
       initial.values <- c(list(betas = fixef(lmeObject), sigma = lmeObject$sigma, D = VC), init.surv)
       if (!is.null(init)) {
@@ -708,11 +735,11 @@ JMstateModel <-
     rmObjs <- c(names(x), "y.long", "mfX", "mfZ", "data.id2")
     rm(list = rmObjs)
     gc()
-    out <- switch(method, 
+    out <- switch(method,
                   `Cox-PH-GH` = JM:::phGH.fit(x, y, id, initial.values, parameterization, derivForm, con),
                   `weibull-AFT-GH` = JM:::weibullAFTGH.fit(x, y, id, initial.values, scaleWB, parameterization, derivForm, con),
                   `weibull-PH-GH` = JM:::weibullPHGH.fit(x, y, id, initial.values, scaleWB, parameterization, derivForm, con),
-                  `piecewise-PH-GH` = JM:::piecewisePHGH.fit(x, y, id, initial.values, parameterization, derivForm, con), 
+                  `piecewise-PH-GH` = JM:::piecewisePHGH.fit(x, y, id, initial.values, parameterization, derivForm, con),
                   `spline-PH-GH` = splinePHGH.fit(x, y, id, initial.values, parameterization, derivForm, con, transform.value),
                   `ch-Laplace` = JM:::chLaplace.fit(x, y, id, initial.values, b, parameterization, derivForm, con))
     H <- out$Hessian
@@ -721,7 +748,7 @@ JMstateModel <-
     }
     else {
       ev <- eigen(H, symmetric = TRUE, only.values = TRUE)$values
-      if (!all(ev >= -1e-06 * abs(ev[1]))) 
+      if (!all(ev >= -1e-06 * abs(ev[1])))
         warning("Hessian matrix at convergence is not positive definite.\n")
     }
     out$coefficients <- out$coefficients[!sapply(out$coefficients, is.null)]
